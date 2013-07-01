@@ -1,0 +1,33 @@
+#!/bin/bash
+# mgropp, 2013-06-26
+set -e
+set -u
+
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_DEPENDENT=4
+
+SMARTD_LOG="/var/log/smartd.log"
+
+if ! /etc/init.d/smartd status > /dev/null
+then
+	echo "smartd not running!"
+	exit $STATE_WARNING
+fi
+
+if [ ! -r "$SMARTD_LOG" ]
+then
+	echo "smartd log file not readable!"
+	exit $STATE_WARNING
+fi
+
+if grep -q 'smartd\[[0-9][0-9]*\]: Warning via' "$SMARTD_LOG"
+then
+	echo "smartd log file contains warnings!"
+	exit $STATE_CRITICAL
+fi
+
+echo "smartd running, no warnings."
+exit $STATE_OK

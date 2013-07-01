@@ -1,0 +1,50 @@
+#!/bin/bash
+# mgropp, 2013-06-26
+
+# Note:
+# Requires MegaCLI (from LSI?)
+# and suid binary from MegaPD.c.
+
+set -u
+
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+MEGAPD=/usr/local/bin/MegaPD
+
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_DEPENDENT=4
+
+return=0
+
+total=`$MEGAPD | egrep ^Firmware\ state: | wc -l`
+if [ $total -eq 0 ]
+then
+	echo "No drive information found?"
+	return=$STATE_UNKNOWN
+else
+	good=`$MEGAPD | egrep '^Firmware state: Online, Spun Up|^Firmware state: Unconfigured\(good\)' | wc -l`
+	if [ $total != $good ]
+	then
+		state=`$MEGAPD | egrep '^Firmware state: ' | egrep -v '^Firmware state: Online, Spun Up|^Firmware state: Unconfigured\(good\)'`
+		state=${state#Firmware state: }
+		devId=`$MEGAPD | egrep -B15 "^Firmware state: $state" | egrep '^Device Id:'`
+		
+		echo "Disk problems ($(( $total - $good ))/$total)! $devId -- $state"
+		return=$STATE_CRITICAL
+	fi
+fi
+
+if [ $return -eq 0 ]
+then
+	unconfiguredGood=`$MEGAPD | egrep '^Firmware state: Unconfigured\(good\)' | wc -l`
+	if [ $unconfiguredGood -gt 0 ]
+	then
+		echo "RAID looks good ($good/$total, $unconfiguredGood spare)."
+	else
+		echo "RAID looks good ($good/$total)."
+	fi
+fi
+
+exit $return

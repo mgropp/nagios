@@ -1,0 +1,46 @@
+#!/bin/bash
+# mgropp, 2013-07-01
+
+# Note: the puppet master must be configured to allow status requests.
+#
+# /etc/puppet/auth.conf:
+#   # allow status
+#   path /status/
+#   auth any
+#   method find
+#   allow *
+
+set -e
+set -u
+
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_DEPENDENT=4
+
+host=puppet
+
+while getopts ":H:" opt
+do
+	case $opt in
+	H)
+		host=$OPTARG
+		;;
+	:)
+		echo "Missing argument!" >&2
+		exit $STATUS_UNKNOWN
+		;;
+	esac
+done
+
+status=`curl -ksS -H "Accept: pson" https://$host:8140/production/status/puppetclient`
+
+if [ $status == '{"is_alive":true}' ]
+then
+	echo "Puppet master: OK"
+	exit $STATE_OK
+else
+	echo "Puppet master: $status"
+	exit $STATE_CRITICAL
+fi
