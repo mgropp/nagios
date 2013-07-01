@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+set -u
+
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_DEPENDENT=4
+
+if ! /etc/init.d/puppet status > /dev/null
+then
+	echo "Puppet agent: not running!"
+	exit $STATE_CRITICAL
+else
+	echo "Puppet agent: running."
+	exit $STATE_OK
+fi
