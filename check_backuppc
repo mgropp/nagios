@@ -1,0 +1,36 @@
+#!/usr/bin/perl -w
+# mgropp, 2013-07-09
+use strict;
+
+my $AGE_WARNING = 129600; # 1.5d
+my $AGE_CRITICAL = 172800; # 2d
+my $STATE_OK = 0;
+my $STATE_WARNING = 1;
+my $STATE_CRITICAL = 2;
+
+my $res = `/usr/local/bin/backuppc_hosts`;
+$res =~ s/^Got reply: %Status = //g;
+
+my %status = eval $res;
+
+# We only report hosts that have been backed up at some point in the past.
+my $count = 0;
+for my $host (keys %status) {
+	if (exists($status{$host}->{"lastGoodBackupTime"})) {
+		$count++;
+		$host =~ /^([a-zA-Z0-9]+)/;
+		my $shorthost = $1;
+		my $lastGood = $status{$host}->{"lastGoodBackupTime"};
+		my $d = time() - $lastGood;
+		if ($d > $AGE_CRITICAL) {
+			printf "Backup age on $shorthost is %.2fd!", ($d / 86400);
+			exit $STATE_CRITICAL;
+		} elsif ($d > $AGE_WARNING) {
+			printf "Backup age on $shorthost is %.2fd!", ($d / 86400);
+			exit $STATE_WARNING;
+		}
+	}
+}
+
+printf "Backups are up to date on $count hosts.";
+exit $STATE_OK;
