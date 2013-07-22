@@ -1,10 +1,5 @@
 #!/bin/bash
 # mgropp, 2013-06-26
-
-# Note:
-# Requires MegaCLI (from LSI?)
-# and suid binary from MegaPD.c.
-
 set -u
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
@@ -16,6 +11,10 @@ STATE_CRITICAL=2
 STATE_UNKNOWN=3
 STATE_DEPENDENT=4
 
+unconf_re='^Firmware state: Unconfigured\(good\)'
+hotspare_re='^Firmware state: Hotspare, Spun Up'
+good_re="^Firmware state: Online, Spun Up|$unconf_re|$hotspare_re"
+
 return=0
 
 total=`$MEGAPD | egrep ^Firmware\ state: | wc -l`
@@ -24,10 +23,10 @@ then
 	echo "No drive information found?"
 	return=$STATE_UNKNOWN
 else
-	good=`$MEGAPD | egrep '^Firmware state: Online, Spun Up|^Firmware state: Unconfigured\(good\)' | wc -l`
+	good=`$MEGAPD | egrep "$good_re" | wc -l`
 	if [ $total != $good ]
 	then
-		state=`$MEGAPD | egrep '^Firmware state: ' | egrep -v '^Firmware state: Online, Spun Up|^Firmware state: Unconfigured\(good\)'`
+		state=`$MEGAPD | egrep "$good_re"`
 		state=${state#Firmware state: }
 		devId=`$MEGAPD | egrep -B15 "^Firmware state: $state" | egrep '^Device Id:'`
 		
@@ -38,13 +37,21 @@ fi
 
 if [ $return -eq 0 ]
 then
-	unconfiguredGood=`$MEGAPD | egrep '^Firmware state: Unconfigured\(good\)' | wc -l`
+	echo -n "RAID looks good ($good/$total"
+
+	hotspare=`$MEGAPD | egrep "$hotspare_re" | wc -l`
+	if [ $hotspare -gt 0 ]
+	then
+		echo -n ", $hotspare hotspares"
+	fi
+
+	unconfiguredGood=`$MEGAPD | egrep "$unconf_re" | wc -l`
 	if [ $unconfiguredGood -gt 0 ]
 	then
-		echo "RAID looks good ($good/$total, $unconfiguredGood spare)."
-	else
-		echo "RAID looks good ($good/$total)."
+		echo -n ", $unconfiguredGood unconf."
 	fi
+
+	echo ")."
 fi
 
 exit $return
