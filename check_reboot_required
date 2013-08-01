@@ -1,0 +1,12 @@
+#!/bin/bash
+STATE_OK=0
+STATE_WARNING=1
+
+if [ -f /var/run/reboot-required ]
+then
+	echo "Reboot required!"
+	exit $STATE_WARNING
+fi
+
+echo "OK (no reboot required)."
+exit $STATE_OK
