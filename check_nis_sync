@@ -1,0 +1,80 @@
+#!/bin/bash
+# mgropp, 2013-08-27
+set -e
+set -u
+
+YPPOLL=/usr/sbin/yppoll
+
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+
+nishost=
+nisdomain=
+nismaster=
+
+usage() {
+	echo "Usage: check_nis_sync -H <hostname> -d <nis domain> -m <master> [ -h ] <maps>"
+	echo
+	echo "  -H  Name of host running the NIS service you wish to check"
+	echo "  -d  NIS domain"
+	echo "  -m  NIS master server"
+	echo "  -h  Show this page"
+	echo
+}
+
+if [ $# -gt 0 ]
+then
+	while getopts H:d:m:h myarg "$@"
+	do
+		case $myarg in
+			h|\?)
+				usage
+				exit
+				;;
+			H)
+				nishost=$OPTARG
+				;;
+			d)
+				nisdomain=$OPTARG
+				;;
+			m)
+				nismaster=$OPTARG
+				;;
+			*)
+				usage
+				exit
+				;;
+		esac
+	done
+else
+	usage
+	exit
+fi
+
+shift $(( $OPTIND - 1 ))
+
+diff=
+
+while [ $# -gt 0 ]
+do
+	map=$1
+	slave=`$YPPOLL -h "$nishost" -d "$nisdomain" "$map"`
+	master=`$YPPOLL -h "$nismaster" -d "$nisdomain" "$map"`
+	
+	if [ "$slave" != "$master" ]
+	then
+		diff="$diff $map"
+	fi
+	
+	shift
+done
+
+if [ "$diff" == "" ]
+then
+	echo "NIS OK (maps are up to date)."
+	exit $STATE_OK
+else
+	echo "NIS maps are out of sync!"
+	exit $STATE_CRITICAL
+fi
