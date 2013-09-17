@@ -7,8 +7,10 @@
  
 int main(int argc, char** argv) {
 	char* args[] = { MEGACLI, "-PDList", "-aALL", NULL };
+	char* envp[] = { "PATH=/usr/bin:/bin:/usr/sbin:/sbin", NULL };
+
 	setuid(0);
-	execv(MEGACLI, args);
+	execve(MEGACLI, args, envp);
  
 	perror("exec");
 	return EXIT_FAILURE;
