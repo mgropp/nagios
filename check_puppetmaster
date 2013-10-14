@@ -1,15 +1,4 @@
 #!/bin/bash
-# mgropp, 2013-07-01
-
-# Note: the puppet master must be configured to allow status requests.
-#
-# /etc/puppet/auth.conf:
-#   # allow status
-#   path /status/
-#   auth any
-#   method find
-#   allow *
-
 set -e
 set -u
 
@@ -36,7 +25,7 @@ done
 
 status=`curl -ksS -H "Accept: pson" https://$host:8140/production/status/puppetclient`
 
-if [ $status == '{"is_alive":true}' ]
+if ( echo "$status" | grep -q '"is_alive":true' )
 then
 	echo "Puppet master: OK"
 	exit $STATE_OK
