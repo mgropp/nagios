@@ -1,0 +1,15 @@
+#!/bin/bash
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_DEPENDENT=4
+
+if ( /usr/local/bin/fail2ban-status > /dev/null 2>&1 )
+then
+	echo "fail2ban: OK"
+	exit $STATE_OK
+else 
+	echo "fail2ban: not running!"
+	exit $STATE_CRITICAL
+fi
